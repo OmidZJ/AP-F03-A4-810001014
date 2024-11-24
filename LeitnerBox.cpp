@@ -6,46 +6,101 @@
 #include <map>
 using namespace std;
 
-map<int, int> translate = {{1, 0}, {3, 1}, {7, 2}, {30, 3}, {-1, -1}};
-map<int, int> translateReversed = {{0, 1}, {1, 3}, {2, 7}, {3, 30}, {4, -1}};
-class card;
+class Card;
+class Day;
+class Box;
+
 class Day
 {
 public:
-    int day = 1;
-    int streak = 0;
     void next_day();
     void reviewStatus(bool TF);
-    int correctAnswers = 0;
-    int wrongAnswers = 0;
-    bool isReview = false;
-    vector<vector<int>> history;
-    vector<card> isDone;
-    bool isIn(const card &element);
+    bool isIn(const Card &element);
     int streakUpdate();
     int Total();
+    int get_day();
+    int get_streak();
+
+    vector<Card> isDone;
+    vector<vector<int>> history;
+    bool reviewIsDone = false;
+    int correctAnswers = 0;
+    int wrongAnswers = 0;
 
 private:
+    int day = 1;
+    int streak = 0;
 };
-class card
+
+class Card
 {
 public:
-    card(string q, string a);
+    Card(string q, string a);
     void print();
-    string question;
-    string answer;
-    int box;
-    int fault = 0;
-    bool operator==(const card &other) const
+    bool operator==(const Card &other) const
     {
         return (question == other.question && answer == other.answer);
     }
+    string get_question();
+    string get_answer();
+
+    int box;
+    int fault = 0;
 
 private:
+    string question;
+    string answer;
 };
+
+class Box
+{
+public:
+    Box(int p);
+    void add(Card c);
+    int find(Card element);
+    int get_period();
+
+    vector<Card> set;
+
+private:
+    int period;
+};
+
+Day day;
+map<int, int> indexToPeriod = {{0, 1}, {1, 3}, {2, 7}, {3, 30}, {4, -1}};
+vector<Box> everyBox = {Box(0), Box(1), Box(2), Box(3), Box(-1)};
+
+vector<Card> todaysCards(int n);
+void add_flashcard();
+void review_today();
+void get_report();
+void get_progress_report();
+void streak();
+void next_day();
+
+int main()
+{
+
+    map<string, void (*)()> commands = {
+        {"add_flashcard", add_flashcard},
+        {"review_today", review_today},
+        {"get_report", get_report},
+        {"get_progress_report", get_progress_report},
+        {"streak", streak},
+        {"next_day", next_day}};
+
+    string command;
+
+    while (cin >> command)
+        if (commands.find(command) != commands.end())
+            commands[command]();
+
+    return 0;
+}
+
 void Day::next_day()
 {
-    if (isReview)
+    if (reviewIsDone)
         streak++;
     else
         streak = 0;
@@ -60,11 +115,11 @@ void Day::next_day()
 void Day::reviewStatus(bool TF)
 {
     if (TF)
-        isReview = true;
+        reviewIsDone = true;
     else
-        isReview = false;
+        reviewIsDone = false;
 }
-bool Day::isIn(const card &element)
+bool Day::isIn(const Card &element)
 {
     for (int i = 0; i < isDone.size(); i++)
     {
@@ -76,9 +131,6 @@ bool Day::isIn(const card &element)
     }
     return false;
 }
-
-Day day;
-
 int Day::Total()
 {
     int total = 0;
@@ -87,70 +139,59 @@ int Day::Total()
         if (i != vector<int>{0, 0})
             total++;
     }
-    if (isReview)
+    if (reviewIsDone)
         return total + 1;
     return total;
 }
 int Day::streakUpdate()
 {
-    if (isReview)
+    if (reviewIsDone)
     {
         return streak + 1;
     }
     return streak;
 }
-card::card(string q, string a)
+int Day::get_day()
+{
+    return day;
+}
+int Day::get_streak()
+{
+    return streak;
+}
+
+Card::Card(string q, string a)
 {
     question = q;
     answer = a;
     box = 0;
 }
-
-void card::print()
+void Card::print()
 {
     cout << question << '/' << '/' << answer << endl;
 }
-
-class box
+string Card::get_question()
 {
-public:
-    box(int p);
-    void add(card c);
-    vector<card> set;
-    int period;
+    return question;
+}
+string Card::get_answer()
+{
+    return answer;
+}
 
-private:
-};
-
-box::box(int p)
+Box::Box(int p)
 {
     period = p;
 }
-
-void box::add(card c)
+void Box::add(Card c)
 {
     set.push_back(c);
 }
-
-vector<box> everyBox = {box(0), box(1), box(2), box(3), box(-1)};
-
-void print()
+int Box::find(Card element)
 {
-    for (auto i : everyBox)
+    for (int i = 0; i < set.size(); i++)
     {
-        cout << i.period << endl;
-        for (auto j : i.set)
-        {
-            j.print();
-        }
-    }
-}
-
-int find(int temp, card element)
-{
-    for (int i = 0; i < everyBox[temp].set.size(); i++)
-    {
-        if (element == everyBox[temp].set[i])
+        if (element == set[i])
         {
 
             return i;
@@ -158,28 +199,19 @@ int find(int temp, card element)
     }
     return -1;
 }
-void add_flashcard()
+int Box::get_period()
 {
-    string n;
-    getline(cin, n);
-    string q, a;
-
-    for (int i = 0; i < stoi(n); i++)
-    {
-        getline(cin, q);
-        getline(cin, a);
-        everyBox[0].add(card(q, a));
-    }
-    cout << "flashcards added to the daily box" << endl;
+    return period;
 }
-vector<card> todaysCards(int n)
+
+vector<Card> todaysCards(int n)
 {
-    vector<card> tempCard;
+    vector<Card> tempCard;
     int size = 0;
     for (int i = everyBox.size() - 1; i > -1; i--)
     {
 
-        if (everyBox[i].period == -1 ? 1 : day.day % translateReversed[everyBox[i].period] != 0)
+        if (everyBox[i].get_period() == -1 ? 1 : day.get_day() % indexToPeriod[everyBox[i].get_period()] != 0)
             continue;
         for (auto j : everyBox[i].set)
         {
@@ -195,31 +227,45 @@ vector<card> todaysCards(int n)
     }
     return tempCard;
 }
+void add_flashcard()
+{
+    string n;
+    getline(cin, n);
+    string q, a;
+
+    for (int i = 0; i < stoi(n); i++)
+    {
+        getline(cin, q);
+        getline(cin, a);
+        everyBox[0].add(Card(q, a));
+    }
+    cout << "flashcards added to the daily box" << endl;
+}
 void review_today()
 {
     string n;
-    getline(cin,n);
-    day.isReview = true;
+    getline(cin, n);
+    day.reviewIsDone = true;
 
     string temp;
-    vector<card> tempCard = todaysCards(stoi(n));
+    vector<Card> tempCard = todaysCards(stoi(n));
     for (auto i : tempCard)
     {
-        cout << "Flashcard: " << i.question << endl;
+        cout << "Flashcard: " << i.get_question() << endl;
         cout << "Your answer: ";
-        
-        getline(cin,temp);
+
+        getline(cin, temp);
         cout << endl;
-        cout << i.answer << temp << endl;
-        
-        if (temp == i.answer)
+        cout << i.get_answer() << temp << endl;
+
+        if (temp == i.get_answer())
         {
-            card j = i;
-            card jj = i;
+            Card j = i;
+            Card jj = i;
             j.fault = 0;
             jj.box++;
             everyBox[jj.box].set.push_back(jj);
-            everyBox[j.box].set.erase(everyBox[j.box].set.begin() + find(j.box, j));
+            everyBox[j.box].set.erase(everyBox[j.box].set.begin() + everyBox[j.box].find(j));
 
             cout << "Your answer was correct! Well done, keep it up!" << endl;
             day.correctAnswers++;
@@ -228,17 +274,17 @@ void review_today()
         {
             if (i.box > 0 && i.fault == 1)
             {
-                card j = i;
-                card jj = i;
+                Card j = i;
+                Card jj = i;
                 jj.fault = 0;
                 jj.box--;
                 everyBox[jj.box].set.push_back(jj);
-                everyBox[j.box].set.erase(everyBox[j.box].set.begin() + find(j.box, j));
+                everyBox[j.box].set.erase(everyBox[j.box].set.begin() + everyBox[j.box].find(j));
             }
             else
-                everyBox[i.box].set[find(i.box, i)].fault++;
+                everyBox[i.box].set[everyBox[i.box].find(i)].fault++;
 
-            cout << "Your answer was incorrect. Don't worry! The correct answer is: " << i.answer << ". Keep practicing!" << endl;
+            cout << "Your answer was incorrect. Don't worry! The correct answer is: " << i.get_answer() << ". Keep practicing!" << endl;
             day.wrongAnswers++;
         }
     }
@@ -251,7 +297,7 @@ void get_report()
 
     getline(cin, inputLine);
 
-    int value1, value2 = day.day;
+    int value1, value2 = day.get_day();
 
     stringstream ss(inputLine);
     ss >> value1;
@@ -267,7 +313,7 @@ void get_report()
         corrects += day.history[i][0];
         mistakes += day.history[i][1];
     }
-    if (value2 == day.day)
+    if (value2 == day.get_day())
     {
         corrects += day.correctAnswers;
         mistakes += day.wrongAnswers;
@@ -286,7 +332,7 @@ void get_progress_report()
 {
     cout << "Challenge Progress Report:\n"
          << endl;
-    cout << "Day of the Challenge: " << day.day << endl;
+    cout << "Day of the Challenge: " << day.get_day() << endl;
     cout << "Streak: " << day.streakUpdate() << endl;
     cout << "Total Days Participated: " << day.Total() << endl;
     cout << "Mastered Flashcards: " << everyBox[4].set.size() << "\n"
@@ -302,34 +348,7 @@ void streak()
 void next_day()
 {
     day.next_day();
-    cout << "Good morning! Today is day " << day.day << " of our journey." << endl;
-    cout << "Your current streak is: " << day.streak << endl;
+    cout << "Good morning! Today is day " << day.get_day() << " of our journey." << endl;
+    cout << "Your current streak is: " << day.get_streak() << endl;
     cout << "Start reviewing to keep your streak!" << endl;
-}
-int main()
-{
-
-    map<string, void (*)()> commands = {
-        {"add_flashcard", add_flashcard},
-        {"review_today", review_today},
-        {"get_report", get_report},
-        {"get_progress_report", get_progress_report},
-        {"streak", streak},
-        {"next_day", next_day}};
-
-    string command;
-
-    while (cin >> command)
-    {
-        if (commands.find(command) != commands.end())
-        {
-            commands[command]();
-        }
-        else
-        {
-        }
-        print();
-    }
-
-    return 0;
 }
