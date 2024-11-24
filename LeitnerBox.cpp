@@ -160,14 +160,14 @@ int find(int temp, card element)
 }
 void add_flashcard()
 {
-    int n;
-    cin >> n;
+    string n;
+    getline(cin, n);
     string q, a;
 
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < stoi(n); i++)
     {
-        cin >> q;
-        cin >> a;
+        getline(cin, q);
+        getline(cin, a);
         everyBox[0].add(card(q, a));
     }
     cout << "flashcards added to the daily box" << endl;
@@ -197,17 +197,21 @@ vector<card> todaysCards(int n)
 }
 void review_today()
 {
-    int n;
-    cin >> n;
+    string n;
+    getline(cin,n);
     day.isReview = true;
 
     string temp;
-    vector<card> tempCard = todaysCards(n);
+    vector<card> tempCard = todaysCards(stoi(n));
     for (auto i : tempCard)
     {
-        cout << i.question << endl;
+        cout << "Flashcard: " << i.question << endl;
         cout << "Your answer: ";
-        cin >> temp;
+        
+        getline(cin,temp);
+        cout << endl;
+        cout << i.answer << temp << endl;
+        
         if (temp == i.answer)
         {
             card j = i;
@@ -258,10 +262,6 @@ void get_report()
     int corrects = 0;
     int mistakes = 0;
 
-    for (auto i : day.history)
-    {
-        cout << i[0] << " " << i[1] << endl;
-    }
     for (int i = value1 - 1; i < value2 - 1; i++)
     {
         corrects += day.history[i][0];
